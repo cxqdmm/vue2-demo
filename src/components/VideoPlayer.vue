@@ -41,6 +41,13 @@
              <div class="progress-container">
                <div class="progress-bar" @click="onProgressClick" ref="progressBar">
                  <div class="progress-filled" :style="{ width: progressPercentage + '%' }"></div>
+                 <div 
+                   class="progress-thumb" 
+                   :class="{ dragging: isDragging }"
+                   :style="{ left: progressPercentage + '%' }"
+                   @mousedown="onThumbMouseDown"
+                   @touchstart="onThumbTouchStart"
+                 ></div>
                </div>
              </div>
    
@@ -89,7 +96,10 @@ export default {
       showRateMenu: false,
       manuallyClosedFloating: false,
       videoWidth: 0,
-      videoHeight: 0
+      videoHeight: 0,
+      isDragging: false,
+      dragStartX: 0,
+      dragStartProgress: 0
     }
   },
   computed: {
@@ -154,6 +164,11 @@ export default {
       }
       this.clearHideTimer();
       document.removeEventListener('click', this.handleGlobalClick);
+      // 清理拖拽事件监听器
+      document.removeEventListener('mousemove', this.onMouseMove);
+      document.removeEventListener('mouseup', this.onMouseUp);
+      document.removeEventListener('touchmove', this.onTouchMove);
+      document.removeEventListener('touchend', this.onTouchEnd);
     }
   },
   methods: {
@@ -334,6 +349,80 @@ export default {
 
     setCurrentTime(time) {
       this.$refs.videoElement.currentTime = time
+    },
+
+    // 拖拽相关方法
+    onThumbMouseDown(event) {
+      event.preventDefault()
+      this.startDrag(event.clientX)
+      document.addEventListener('mousemove', this.onMouseMove)
+      document.addEventListener('mouseup', this.onMouseUp)
+    },
+
+    onThumbTouchStart(event) {
+      event.preventDefault()
+      const touch = event.touches[0]
+      this.startDrag(touch.clientX)
+      document.addEventListener('touchmove', this.onTouchMove)
+      document.addEventListener('touchend', this.onTouchEnd)
+    },
+
+    startDrag(clientX) {
+      this.isDragging = true
+      this.dragStartX = clientX
+      this.dragStartProgress = this.progressPercentage
+      // 拖拽时显示控制栏
+      this.showControls = true
+      this.clearHideTimer()
+    },
+
+    onMouseMove(event) {
+      if (this.isDragging) {
+        this.updateProgress(event.clientX)
+      }
+    },
+
+    onTouchMove(event) {
+      if (this.isDragging) {
+        event.preventDefault()
+        const touch = event.touches[0]
+        this.updateProgress(touch.clientX)
+      }
+    },
+
+    updateProgress(clientX) {
+      const progressBar = this.$refs.progressBar
+      const rect = progressBar.getBoundingClientRect()
+      const deltaX = clientX - this.dragStartX
+      const progressWidth = rect.width
+      const deltaPercentage = (deltaX / progressWidth) * 100
+      
+      let newPercentage = this.dragStartProgress + deltaPercentage
+      newPercentage = Math.max(0, Math.min(100, newPercentage))
+      
+      const newTime = (newPercentage / 100) * this.duration
+      this.$refs.videoElement.currentTime = newTime
+      this.currentTime = newTime
+    },
+
+    onMouseUp() {
+      this.endDrag()
+      document.removeEventListener('mousemove', this.onMouseMove)
+      document.removeEventListener('mouseup', this.onMouseUp)
+    },
+
+    onTouchEnd() {
+      this.endDrag()
+      document.removeEventListener('touchmove', this.onTouchMove)
+      document.removeEventListener('touchend', this.onTouchEnd)
+    },
+
+    endDrag() {
+      this.isDragging = false
+      // 拖拽结束后重新开始隐藏定时器
+      if (this.isPlaying) {
+        this.startHideTimer()
+      }
     }
   }
 }
@@ -626,6 +715,30 @@ export default {
   height: 100%;
   background: #b4b0ae;
   border-radius: 2px;
+}
+
+.progress-thumb {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  background: white;
+  border: 2px solid #b4b0ae;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  opacity: 1;
+  transition: transform 0.2s ease;
+  z-index: 10;
+}
+
+.progress-thumb:hover {
+  transform: translate(-50%, -50%) scale(1.2);
+}
+
+.progress-thumb.dragging {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.3);
 }
 
 /* 时间显示样式 */

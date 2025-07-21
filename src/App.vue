@@ -25,8 +25,7 @@ export default {
   data() {
     return {
       count: 0,
-      videoSrc: '',
-      // videoSrc: 'https://iobs.pingan.com.cn/download/ehis-iproductmarket-sf-prd/siWKzIf1.mp4',
+      videoSrc: 'https://iobs.pingan.com.cn/download/ehis-iproductmarket-sf-prd/siWKzIf1.mp4',
       posterSrc: 'https://stg.iobs.pingan.com.cn/download/ehis-group-insurance-csp-cbs-sf-stg/17510221409791804',
       videoStatus: '未播放',
       currentVideoTime: 0
