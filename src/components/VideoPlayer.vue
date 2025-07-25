@@ -14,7 +14,13 @@
 
       <!-- 视频播放器容器 -->
        <div class="video-player-box" ref="videoWrapper" :style="{ paddingTop: (aspectRatio * 100) + '%' }">
-         <div class="video-player-container"  v-show="shouldShowVideoContainer">
+         <div 
+           class="video-player-container"  
+           v-show="shouldShowVideoContainer"
+           @mousedown="onContainerMouseDown"
+           @touchstart="onContainerTouchStart"
+           :style="floatingContainerStyle"
+         >
            <!-- 关闭按钮 -->
            <van-icon name="cross" class="video-close-btn" @click="closeVideo" />
            <!-- 视频暂停时的播放按钮 -->
@@ -99,7 +105,13 @@ export default {
       videoHeight: 0,
       isDragging: false,
       dragStartX: 0,
-      dragStartProgress: 0
+      dragStartProgress: 0,
+      // 拖拽相关数据
+      isDraggingContainer: false,
+      dragStartMouseX: 0,
+      dragStartMouseY: 0,
+      containerX: 28, // 悬浮容器的X位置
+      containerY: 28  // 悬浮容器的Y位置
     }
   },
   computed: {
@@ -140,6 +152,17 @@ export default {
     // 是否为竖屏视频
     isPortrait() {
       return this.aspectRatio < 1
+    },
+    // 悬浮容器的动态样式
+    floatingContainerStyle() {
+      if (this.isFloating) {
+        return {
+          left: this.containerX + 'px',
+          top: this.containerY + 'px',
+          cursor: this.isDraggingContainer ? 'grabbing' : 'grab'
+        }
+      }
+      return {}
     }
   },
   mounted() {
@@ -169,6 +192,11 @@ export default {
       document.removeEventListener('mouseup', this.onMouseUp);
       document.removeEventListener('touchmove', this.onTouchMove);
       document.removeEventListener('touchend', this.onTouchEnd);
+      // 清理容器拖拽事件监听器
+      document.removeEventListener('mousemove', this.onContainerMouseMove);
+      document.removeEventListener('mouseup', this.onContainerMouseUp);
+      document.removeEventListener('touchmove', this.onContainerTouchMove);
+      document.removeEventListener('touchend', this.onContainerTouchEnd);
     }
   },
   methods: {
@@ -423,6 +451,88 @@ export default {
       if (this.isPlaying) {
         this.startHideTimer()
       }
+    },
+
+    // 容器拖拽相关方法
+    onContainerMouseDown(event) {
+      // 只在悬浮状态下允许拖拽
+      if (!this.isFloating) return
+      
+      // 防止拖拽时触发其他点击事件
+      event.preventDefault()
+      event.stopPropagation()
+      
+      this.startContainerDrag(event.clientX, event.clientY)
+      document.addEventListener('mousemove', this.onContainerMouseMove)
+      document.addEventListener('mouseup', this.onContainerMouseUp)
+    },
+
+    onContainerTouchStart(event) {
+      // 只在悬浮状态下允许拖拽
+      if (!this.isFloating) return
+      
+      event.preventDefault()
+      event.stopPropagation()
+      
+      const touch = event.touches[0]
+      this.startContainerDrag(touch.clientX, touch.clientY)
+      document.addEventListener('touchmove', this.onContainerTouchMove)
+      document.addEventListener('touchend', this.onContainerTouchEnd)
+    },
+
+    startContainerDrag(clientX, clientY) {
+      this.isDraggingContainer = true
+      this.dragStartMouseX = clientX - this.containerX
+      this.dragStartMouseY = clientY - this.containerY
+    },
+
+    onContainerMouseMove(event) {
+      if (this.isDraggingContainer) {
+        this.updateContainerPosition(event.clientX, event.clientY)
+      }
+    },
+
+    onContainerTouchMove(event) {
+      if (this.isDraggingContainer) {
+        event.preventDefault()
+        const touch = event.touches[0]
+        this.updateContainerPosition(touch.clientX, touch.clientY)
+      }
+    },
+
+    updateContainerPosition(clientX, clientY) {
+      // 计算新位置
+      let newX = clientX - this.dragStartMouseX
+      let newY = clientY - this.dragStartMouseY
+      
+      // 获取屏幕尺寸和容器尺寸
+      const screenWidth = window.innerWidth
+      const screenHeight = window.innerHeight
+      const containerWidth = 160 // 悬浮容器宽度
+      const containerHeight = 90 // 悬浮容器高度
+      
+      // 限制在屏幕范围内
+      newX = Math.max(0, Math.min(screenWidth - containerWidth, newX))
+      newY = Math.max(0, Math.min(screenHeight - containerHeight, newY))
+      
+      this.containerX = newX
+      this.containerY = newY
+    },
+
+    onContainerMouseUp() {
+      this.endContainerDrag()
+      document.removeEventListener('mousemove', this.onContainerMouseMove)
+      document.removeEventListener('mouseup', this.onContainerMouseUp)
+    },
+
+    onContainerTouchEnd() {
+      this.endContainerDrag()
+      document.removeEventListener('touchmove', this.onContainerTouchMove)
+      document.removeEventListener('touchend', this.onContainerTouchEnd)
+    },
+
+    endContainerDrag() {
+      this.isDraggingContainer = false
     }
   }
 }
@@ -574,12 +684,12 @@ export default {
 /* 悬浮状态下的视频播放器容器样式 */
 .video-container.floating .video-player-container {
   position: fixed;
-  top: 28px;
-  left: 28px;
   width: 160px;
   height: 90px;
   border-radius: 6px;
   z-index: 1001;
+  transition: none; /* 拖拽时不要过渡动画 */
+  user-select: none; /* 防止拖拽时选中文本 */
 }
 
 .video-close-btn {

@@ -10,6 +10,46 @@
       @pause="onVideoPause"
       @timeupdate="onVideoTimeUpdate"
     />
+    
+    <!-- Vant Input 组件区域 -->
+    <div class="input-section">
+      <van-field
+        v-model="inputValue"
+        label="用户名"
+        placeholder="请输入用户名"
+        clearable
+        @input="onInputChange"
+      />
+      
+      <van-field··
+        v-model="password"
+        type="password"
+        label="密码"
+        placeholder="请输入密码"
+        clearable
+      />
+      
+      <van-field
+        v-model="message"
+        rows="2"
+        autosize
+        label="留言"
+        type="textarea"
+        placeholder="请输入留言"
+        show-word-limit
+        maxlength="50"
+      />
+      
+      <div class="button-group">
+        <van-button type="primary" size="large" @click="handleSubmit">
+          提交
+        </van-button>
+        <van-button size="large" @click="handleClear">
+          清空
+        </van-button>
+      </div>
+    </div>
+    
     <div class="content-section"></div>
   </div>
 </template>
@@ -28,7 +68,11 @@ export default {
       videoSrc: 'https://iobs.pingan.com.cn/download/ehis-iproductmarket-sf-prd/siWKzIf1.mp4',
       posterSrc: 'https://stg.iobs.pingan.com.cn/download/ehis-group-insurance-csp-cbs-sf-stg/17510221409791804',
       videoStatus: '未播放',
-      currentVideoTime: 0
+      currentVideoTime: 0,
+      // Vant Input 相关数据
+      inputValue: '',
+      password: '',
+      message: ''
     }
   },
   methods: {
@@ -55,6 +99,33 @@ export default {
       const mins = Math.floor(seconds / 60)
       const secs = Math.floor(seconds % 60)
       return `${mins}:${secs.toString().padStart(2, '0')}`
+    },
+    // Vant Input 相关方法
+    onInputChange(value) {
+      console.log('输入值变化:', value)
+    },
+    handleSubmit() {
+      if (!this.inputValue.trim()) {
+        this.$toast('请输入用户名')
+        return
+      }
+      if (!this.password.trim()) {
+        this.$toast('请输入密码')
+        return
+      }
+      
+      this.$toast.success('提交成功!')
+      console.log('提交的数据:', {
+        username: this.inputValue,
+        password: this.password,
+        message: this.message
+      })
+    },
+    handleClear() {
+      this.inputValue = ''
+      this.password = ''
+      this.message = ''
+      this.$toast('已清空所有输入')
     }
   }
 }
@@ -63,6 +134,22 @@ export default {
 <style scoped>
 #app {
   min-height: 100vh;
+}
+
+.input-section {
+  padding: 20px;
+  background-color: #f8f9fa;
+  margin: 20px 0;
+}
+
+.button-group {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.button-group .van-button {
+  flex: 1;
 }
 
 .content-section {
